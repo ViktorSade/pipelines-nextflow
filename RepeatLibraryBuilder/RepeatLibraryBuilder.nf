@@ -57,6 +57,9 @@ workflow REPEAT_LIBRARY_BUILDER {
         // Report?
 
     emit:
+        repeat_library = REPEATMODELER_RUN().out.repeat_library
+        gene_filtered_repeat_library = PROTEXCLUDER().out.repeat_library
+        filtered_proteins = GAAS_FILTERSEQ().out.filtered_proteins
 
 }
 
@@ -67,7 +70,7 @@ process BLASTX_MAKEBLASTDB {  // Import as module, call 3x
     path library
 
     output:
-    path "$library*", includeInputs: true
+    path "$library*", includeInputs: true, emit: blast_db
 
     script:
     """
@@ -83,7 +86,7 @@ process REPEATMODELER_BUILDDB {
     val organism_name
 
     output:
-    path ""
+    path "${organism_name}.*", emit: repeat_modeler_db
 
     script:
     """
@@ -98,7 +101,7 @@ process REPEATMODELER_RUN {
     path dbfiles
 
     output:
-    path "*/consensi.fa.classified"
+    path "*/consensi.fa.classified", emit: repeat_library
 
     script:
     database_name = // generate prefix.
@@ -114,8 +117,7 @@ process TRANSPOSONPSI {
     path fasta  // proteins.fasta
 
     output:
-    path "${fasta}.all.TPSI.allHits"
-    path "${fasta}.all.TPSI.topHits"
+    path "${fasta}.all.TPSI.{allHits,topHits}", emit: transposon_hits
 
     script:
     """
@@ -132,7 +134,7 @@ process GAAS_FILTERSEQ {
     path tophits
 
     output:
-    path "proteins.filtered.fa"
+    path "proteins.filtered.fa", emit: filtered_fasta
 
     script:
     """
@@ -150,7 +152,7 @@ process BLAST {
     path fasta // consensi.fa.classified
 
     output:
-    path "blastx.out"
+    path "blastx.out", emit: blast_hits
 
     script:
     """
@@ -163,15 +165,15 @@ process BLAST {
 process PROTEXCLUDER {
 
     input:
-    path blastx
+    path blast_hits
     path fasta // consensi.fa.classified
 
     output:
-    path ""
+    path "${fasta}noProtFinal", emit: repeat_library
 
     script:
     """
-    ProtExcluder.pl $blastx $fasta
+    ProtExcluder.pl $blast_hits $fasta
     """
 
 }
