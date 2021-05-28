@@ -50,7 +50,7 @@ workflow REPEAT_LIBRARY_BUILDER {
         REPEATMODELER_BUILDDB()
         REPEATMODELER_RUN()
         TRANSPOSONPSI() // Check if Uniprot updated? Check input or parameter?
-        FILTERSEQ()
+        GAAS_FILTERSEQ()
         BLAST()
         PROTEXCLUDER()
 
@@ -125,7 +125,7 @@ process TRANSPOSONPSI {
 
 }
 
-process FILTERSEQ {
+process GAAS_FILTERSEQ {
 
     input:
     path fasta
