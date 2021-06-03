@@ -39,6 +39,16 @@ workflow {
 
 }
 
+include { BLAST_MAKEBLASTDB as BUILD_REPEATMASKER_DB  } from '../modules/local/blast/makeblastdb'           addParams(options:modules['build_repeatmasker_db'])
+include { BLAST_MAKEBLASTDB as BUILD_REPEATPEPTIDE_DB } from '../modules/local/blast/makeblastdb'           addParams(options:modules['build_repeatpeptide_db'])
+include { BLAST_MAKEBLASTDB as BUILD_PROTEIN_DB       } from '../modules/local/blast/makeblastdb'           addParams(options:modules['build_protein_db'])
+include { REPEATMODELER_BUILDDB                       } from '../modules/local/repeatmodeler/builddatabase' addParams(options:modules['repeatmodeler_builddatabase'])
+include { REPEATMODELER_REPEATMODELER                 } from '../modules/local/repeatmodeler/repeatmodeler' addParams(options:modules['repeatmodeler'])
+include { TRANSPOSONPSI                               } from '../modules/local/transposonpsi/transposonpsi' addParams(options:modules['transposonpsi'])
+include { GAAS_FILTERSEQ                              } from '../modules/local/gaas/filterseq'              addParams(options:modules['gaas_filterseq'])
+include { BLAST_BLASTX                                } from '../modules/local/blast/blastx'                addParams(options:modules['blastx'])
+include { PROTEXCLUDER                                } from '../modules/local/protexcluder/protexcluder'   addParams(options:modules['protexcluder'])
+
 workflow REPEAT_LIBRARY_BUILDER {
 
     take:
@@ -46,7 +56,8 @@ workflow REPEAT_LIBRARY_BUILDER {
 
     main:
         // Analyses
-        BLASTX_MAKEBLASTDB() // import as X, Y, Z // conditional execution / input.parameter?
+        CHECK_INPUT()
+        BLAST_MAKEBLASTDB() // import as X, Y, Z // conditional execution / input.parameter?
         REPEATMODELER_BUILDDB()
         REPEATMODELER_REPEATMODELER()
         TRANSPOSONPSI() // Check if Uniprot updated? Check input or parameter?
