@@ -74,7 +74,7 @@ workflow REPEAT_LIBRARY_BUILDER {
 
 }
 
-process BLASTX_MAKEBLASTDB {  // Import as module, call 3x
+/* process BLASTX_MAKEBLASTDB {  // Import as module, call 3x
 
     input:
     val type
@@ -112,7 +112,7 @@ process REPEATMODELER_REPEATMODELER {
     path dbfiles
 
     output:
-    path "*/consensi.fa.classified", emit: repeat_library
+    path "* /consensi.fa.classified", emit: repeat_library
 
     script:
     database_name = // generate prefix.
@@ -188,7 +188,8 @@ process PROTEXCLUDER {
     """
 
 }
-
+ */
+ 
 workflow.onComplete {
     log.info ( workflow.success ? "\nRepeat Library Builder complete!\n" : "Oops .. something went wrong\n" )
 }
