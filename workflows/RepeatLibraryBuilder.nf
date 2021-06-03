@@ -48,16 +48,16 @@ workflow REPEAT_LIBRARY_BUILDER {
         // Analyses
         BLASTX_MAKEBLASTDB() // import as X, Y, Z // conditional execution / input.parameter?
         REPEATMODELER_BUILDDB()
-        REPEATMODELER_RUN()
+        REPEATMODELER_REPEATMODELER()
         TRANSPOSONPSI() // Check if Uniprot updated? Check input or parameter?
         GAAS_FILTERSEQ()
-        BLAST()
+        BLAST_BLASTX()
         PROTEXCLUDER()
 
         // Report?
 
     emit:
-        repeat_library = REPEATMODELER_RUN().out.repeat_library
+        repeat_library = REPEATMODELER_REPEATMODELER().out.repeat_library
         gene_filtered_repeat_library = PROTEXCLUDER().out.repeat_library
         filtered_proteins = GAAS_FILTERSEQ().out.filtered_proteins
 
@@ -95,7 +95,7 @@ process REPEATMODELER_BUILDDB {
 
 }
 
-process REPEATMODELER_RUN {
+process REPEATMODELER_REPEATMODELER {
 
     input:
     path dbfiles
@@ -144,7 +144,7 @@ process GAAS_FILTERSEQ {
 
 }
 
-process BLAST {
+process BLAST_BLASTX {
     //versions ncbi-blast-2.2.28+ and ncbi-blast-2.4.0+
 
     input:
