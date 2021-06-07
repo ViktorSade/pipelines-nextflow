@@ -32,6 +32,10 @@ NBIS
 
  """
 
+def buildrepeatmaskerdb = params.build_repeat_masker_lib
+def buildrepeatpeptidedb = params.build_repeat_peps_lib
+def buildtransposonpsidb = build_transposon_psi_lib
+
 workflow {
 
     main:
@@ -40,8 +44,8 @@ workflow {
 }
 
 include { BLAST_MAKEBLASTDB as BUILD_REPEATMASKER_DB  } from '../modules/local/blast/makeblastdb'           addParams(options:modules['build_repeatmasker_db'])
-include { BLAST_MAKEBLASTDB as BUILD_REPEATPEPTIDE_DB } from '../modules/local/blast/makeblastdb'           addParams(options:modules['build_repeatpeptide_db'])
-include { BLAST_MAKEBLASTDB as BUILD_PROTEIN_DB       } from '../modules/local/blast/makeblastdb'           addParams(options:modules['build_protein_db'])
+include { BLAST_MAKEBLASTDB as BUILD_TRANSPOSIBLE_DB  } from '../modules/local/blast/makeblastdb'           addParams(options:modules['build_repeatpeptide_db'])
+include { BLAST_MAKEBLASTDB as BUILD_UNIPROT_DB       } from '../modules/local/blast/makeblastdb'           addParams(options:modules['build_protein_db'])
 include { REPEATMODELER_BUILDDB                       } from '../modules/local/repeatmodeler/builddatabase' addParams(options:modules['repeatmodeler_builddatabase'])
 include { REPEATMODELER_REPEATMODELER                 } from '../modules/local/repeatmodeler/repeatmodeler' addParams(options:modules['repeatmodeler'])
 include { TRANSPOSONPSI                               } from '../modules/local/transposonpsi/transposonpsi' addParams(options:modules['transposonpsi'])
@@ -52,25 +56,35 @@ include { PROTEXCLUDER                                } from '../modules/local/p
 workflow REPEAT_LIBRARY_BUILDER {
 
     take:
-        genome
+        genome                                  // [name, path to genome]
+        rep_mask_db                             // path to repeat masker library
+        rep_pep_db                              // path to transposible element library
+        uniprot_db                              // path to Uniprot database
 
     main:
         // Analyses
-        CHECK_INPUT()
-        BLAST_MAKEBLASTDB() // import as X, Y, Z // conditional execution / input.parameter?
-        REPEATMODELER_BUILDDB()
-        REPEATMODELER_REPEATMODELER()
-        TRANSPOSONPSI() // Check if Uniprot updated? Check input or parameter?
-        GAAS_FILTERSEQ()
-        BLAST_BLASTX()
-        PROTEXCLUDER()
+        BUILD_REPEATMASKER_DB(rep_mask_db)       // uses `storeDir` to determine if build needed
+        BUILD_TRANSPOSIBLE_DB(rep_pep_db)        // uses `storeDir` to determine if build needed
+        BUILD_UNIPROT_DB(uniprot_db)             // uses `storeDir` to determine if build needed
+        TRANSPOSONPSI(BUILD_UNIPROT_DB.out.db)   // uses `storeDir` to determine if build needed
+        REPEATMODELER_BUILDDB(genome)            // Does this need the db's above?
+        REPEATMODELER_REPEATMODELER(
+            REPEATMODELER_BUILDDB.out.db,
+            BUILD_REPEATMASKER_DB.out.db,        // Which process needs the db's?
+            BUILD_TRANSPOSIBLE_DB.out.db)
+        GAAS_FILTERSEQ(uniprot_db,TRANSPOSONPSI.out.tophits)
+        BLAST_MAKEBLASTDB(GAAS_FILTERSEQ.out.filtered_sequences)
+        BLAST_BLASTX(REPEATMODELER_REPEATMODELER.out.repeat_sequences,
+            BLAST_MAKEBLASTDB.out.db)
+        PROTEXCLUDER(REPEATMODELER_REPEATMODELER.out.repeat_sequences,
+            BLAST_BLASTX.out.txt)
 
         // Report?
 
     emit:
-        repeat_library = REPEATMODELER_REPEATMODELER().out.repeat_library
-        gene_filtered_repeat_library = PROTEXCLUDER().out.repeat_library
-        filtered_proteins = GAAS_FILTERSEQ().out.filtered_proteins
+        repeat_library = REPEATMODELER_REPEATMODELER.out.repeat_sequences
+        gene_filtered_repeat_library = PROTEXCLUDER.out.repeat_sequences
+        filtered_proteins = GAAS_FILTERSEQ.out.filtered_sequences
 
 }
 
@@ -189,7 +203,7 @@ process PROTEXCLUDER {
 
 }
  */
- 
+
 workflow.onComplete {
     log.info ( workflow.success ? "\nRepeat Library Builder complete!\n" : "Oops .. something went wrong\n" )
 }
