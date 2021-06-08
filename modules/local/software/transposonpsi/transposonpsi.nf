@@ -45,7 +45,7 @@ process TRANSPOSONPSI {
     //               https://github.com/nf-core/modules/blob/master/software/bwa/index/main.nf
     // TODO nf-core: Where applicable please provide/convert compressed files as input/output
     //               e.g. "*.fastq.gz" and NOT "*.fastq", "*.bam" and NOT "*.sam" etc.
-    tuple meta(val), path(fasta)  // proteins.fasta
+    tuple val(meta), path(fasta)  // proteins.fasta
 
     output:
     // TODO nf-core: Named file extensions MUST be emitted for ALL output channels
