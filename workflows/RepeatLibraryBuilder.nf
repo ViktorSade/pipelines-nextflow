@@ -65,17 +65,21 @@ workflow REPEAT_LIBRARY_BUILDER {
         // Analyses
         BUILD_REPEATMASKER_DB(rep_mask_db)       // uses `storeDir` to determine if build needed
         BUILD_TRANSPOSIBLE_DB(rep_pep_db)        // uses `storeDir` to determine if build needed
-        BUILD_UNIPROT_DB(uniprot_db)             // uses `storeDir` to determine if build needed
-        TRANSPOSONPSI(BUILD_UNIPROT_DB.out.db)   // uses `storeDir` to determine if build needed
         REPEATMODELER_BUILDDB(genome)            // Does this need the db's above?
         REPEATMODELER_REPEATMODELER(
             REPEATMODELER_BUILDDB.out.db,
             BUILD_REPEATMASKER_DB.out.db,        // Which process needs the db's?
             BUILD_TRANSPOSIBLE_DB.out.db)
-        GAAS_FILTERSEQ(uniprot_db,TRANSPOSONPSI.out.tophits)
-        BLAST_MAKEBLASTDB(GAAS_FILTERSEQ.out.filtered_sequences)
+        if (!params.uniprot_filtered_db){
+            TRANSPOSONPSI(uniprot_db)
+            GAAS_FILTERSEQ(uniprot_db,TRANSPOSONPSI.out.tophits)
+            BUILD_UNIPROT_DB(GAAS_FILTERSEQ.out.filtered_sequences)             // uses `storeDir` to determine if build needed
+            BUILD_UNIPROT_DB.out.db.set { filtered_uniprot_db }
+        } else {
+            uniprot_db.set { filtered_uniprot_db }
+        }
         BLAST_BLASTX(REPEATMODELER_REPEATMODELER.out.repeat_sequences,
-            BLAST_MAKEBLASTDB.out.db)
+            filtered_uniprot_db)
         PROTEXCLUDER(REPEATMODELER_REPEATMODELER.out.repeat_sequences,
             BLAST_BLASTX.out.txt)
 
@@ -84,7 +88,7 @@ workflow REPEAT_LIBRARY_BUILDER {
     emit:
         repeat_library = REPEATMODELER_REPEATMODELER.out.repeat_sequences
         gene_filtered_repeat_library = PROTEXCLUDER.out.repeat_sequences
-        filtered_proteins = GAAS_FILTERSEQ.out.filtered_sequences
+        filtered_proteins = GAAS_FILTERSEQ.out.filtered_sequences.ifEmpty([])
 
 }
 
