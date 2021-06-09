@@ -21,8 +21,8 @@ process GAAS_FILTERSEQ {
     }
 
     input:
-    tuple val(meta), path(tophits)
     tuple val(meta), path(fasta)
+    path(tophits)
 
     output:
     tuple val(meta), path("proteins.filtered.fa"), emit: fasta
