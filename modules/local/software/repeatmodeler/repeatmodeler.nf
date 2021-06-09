@@ -23,19 +23,16 @@ process REPEATMODELER_REPEATMODELER {
     path  db
 
     output:
-    // tuple val(meta), path('*.blastn.txt'), emit: txt
-    tuple val(meta), path "*/consensi.fa.classified"      , emit: repeat_library
+    tuple val(meta), path "*/consensi.fa.classified"      , emit: repeat_sequences
     path '*.version.txt'                                  , emit: version
 
     script:
     def software = getSoftwareName(task.process)
     def prefix   = options.suffix ? "${meta.id}${options.suffix}" : "${meta.id}"
     """
-    # -engine ncbi into \$options.args
     # FIX DB path name
     DB=$( find -L ./ -name "*.ndb" | sed 's/.ndb//' )
     RepeatModeler $options.args –database \$DB –pa ${task.cpus}
-    # FIXME RepeatModeler version
-    echo \$(RepeatModeler -version 2>&1) | sed 's/^.*blastn: //; s/ .*\$//' > ${software}.version.txt
+    RepeatModeler --version | sed -e 's/RepeatModeler version //' > ${software}.version.txt
     """
 }

@@ -51,9 +51,9 @@ workflow {
 }
 
 include { BLAST_MAKEBLASTDB as BUILD_REPEATMASKER_DB  } from '../modules/local/blast/makeblastdb'           addParams(options:modules['build_repeatmasker_db'])
-include { BLAST_MAKEBLASTDB as BUILD_TRANSPOSIBLE_DB  } from '../modules/local/blast/makeblastdb'           addParams(options:modules['build_repeatpeptide_db'])
-include { BLAST_MAKEBLASTDB as BUILD_UNIPROT_DB       } from '../modules/local/blast/makeblastdb'           addParams(options:modules['build_protein_db'])
-include { REPEATMODELER_BUILDDB                       } from '../modules/local/repeatmodeler/builddatabase' addParams(options:modules['repeatmodeler_builddatabase'])
+include { BLAST_MAKEBLASTDB as BUILD_TRANSPOSIBLE_DB  } from '../modules/local/blast/makeblastdb'           addParams(options:modules['build_te_db'])
+include { BLAST_MAKEBLASTDB as BUILD_UNIPROT_DB       } from '../modules/local/blast/makeblastdb'           addParams(options:modules['build_uniprot_db'])
+include { REPEATMODELER_BUILDDATABASE                 } from '../modules/local/repeatmodeler/builddatabase' addParams(options:modules['repeatmodeler_builddb'])
 include { REPEATMODELER_REPEATMODELER                 } from '../modules/local/repeatmodeler/repeatmodeler' addParams(options:modules['repeatmodeler'])
 include { TRANSPOSONPSI                               } from '../modules/local/transposonpsi/transposonpsi' addParams(options:modules['transposonpsi'])
 include { GAAS_FILTERSEQ                              } from '../modules/local/gaas/filterseq'              addParams(options:modules['gaas_filterseq'])
@@ -70,20 +70,20 @@ workflow REPEAT_LIBRARY_BUILDER {
 
     main:
         // Analyses
-        BUILD_REPEATMASKER_DB(rep_mask_db)       // uses `storeDir` to determine if build needed
-        BUILD_TRANSPOSIBLE_DB(rep_pep_db)        // uses `storeDir` to determine if build needed
-        REPEATMODELER_BUILDDB(genome)            // Does this need the db's above?
+        BUILD_REPEATMASKER_DB(rep_mask_db)       // uses `storeDir` to determine if build needed?
+        BUILD_TRANSPOSIBLE_DB(rep_pep_db)        // uses `storeDir` to determine if build needed?
+        REPEATMODELER_BUILDDATABASE(genome)      // Does this need the db's above?
         REPEATMODELER_REPEATMODELER(
-            REPEATMODELER_BUILDDB.out.db,
+            REPEATMODELER_BUILDDATABASE.out.db,
             BUILD_REPEATMASKER_DB.out.db,        // Which process needs the db's?
             BUILD_TRANSPOSIBLE_DB.out.db)
-        if (!params.uniprot_filtered_db){
+        if (params.uniprot_is_filtered){
+            uniprot_db.set { filtered_uniprot_db }
+        } else {
             TRANSPOSONPSI(uniprot_db)
             GAAS_FILTERSEQ(uniprot_db,TRANSPOSONPSI.out.tophits)
             BUILD_UNIPROT_DB(GAAS_FILTERSEQ.out.filtered_sequences)             // uses `storeDir` to determine if build needed
             BUILD_UNIPROT_DB.out.db.set { filtered_uniprot_db }
-        } else {
-            uniprot_db.set { filtered_uniprot_db }
         }
         BLAST_BLASTX(REPEATMODELER_REPEATMODELER.out.repeat_sequences,
             filtered_uniprot_db)
@@ -95,7 +95,7 @@ workflow REPEAT_LIBRARY_BUILDER {
     emit:
         repeat_library = REPEATMODELER_REPEATMODELER.out.repeat_sequences
         gene_filtered_repeat_library = PROTEXCLUDER.out.repeat_sequences
-        filtered_proteins = GAAS_FILTERSEQ.out.filtered_sequences.ifEmpty([])
+        filtered_proteins = GAAS_FILTERSEQ.out.filtered_sequences.ifEmpty([])   // Or do you want the next stage?
 
 }
 

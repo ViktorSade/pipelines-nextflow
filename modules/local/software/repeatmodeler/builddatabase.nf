@@ -29,11 +29,9 @@ process REPEATMODELER_BUILDDATABASE {
     def software = getSoftwareName(task.process)
     def prefix   = options.suffix ? "${meta.id}${options.suffix}" : "${meta.id}"
     """
-    # -engine ncbi into \$options.args
     BuildDatabase -name ${meta.id} $options.args $fasta
     mkdir repeatmodeler_db
-    mv ${organism_name}.* repeatmodeler_db
-    # FIXME RepeatModeler version
-    echo \$(RepeatModeler -version 2>&1) | sed 's/^.*blastn: //; s/ .*\$//' > ${software}.version.txt
+    mv ${meta.id}.* repeatmodeler_db
+    RepeatModeler --version | sed -e 's/RepeatModeler version //' > ${software}.version.txt
     """
 }
