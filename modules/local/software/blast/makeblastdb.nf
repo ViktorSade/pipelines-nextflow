@@ -33,6 +33,6 @@ process BLAST_MAKEBLASTDB {
         $options.args
     mkdir blast_db
     mv ${fasta}* blast_db
-    echo \$(blastn -version 2>&1) | sed 's/^.*blastn: //; s/ .*\$//' > ${software}.version.txt
+    makeblastdb -version | sed -e '/^makeblastdb:/!d; s/^.*makeblastdb: //' > ${software}.version.txt
     """
 }

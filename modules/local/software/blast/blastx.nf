@@ -23,7 +23,7 @@ process BLAST_BLASTX {
     path  db
 
     output:
-    tuple val(meta), path('*.blastn.txt'), emit: txt
+    tuple val(meta), path('*.blastx.txt'), emit: txt
     path '*.version.txt'                 , emit: version
 
     script:
@@ -31,12 +31,12 @@ process BLAST_BLASTX {
     def prefix   = options.suffix ? "${meta.id}${options.suffix}" : "${meta.id}"
     """
     DB=`find -L ./ -name "*.ndb" | sed 's/.ndb//'`
-    blastn \\
+    blastx \\
         -num_threads $task.cpus \\
         -db \$DB \\
         -query $fasta \\
         $options.args \\
-        -out ${prefix}.blastn.txt
-    echo \$(blastn -version 2>&1) | sed 's/^.*blastn: //; s/ .*\$//' > ${software}.version.txt
+        -out ${prefix}.blastx.txt
+    blastx -version | sed -e '/^blastx:/!d; s/^.*blastx: //' > ${software}.version.txt
     """
 }

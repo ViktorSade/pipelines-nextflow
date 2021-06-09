@@ -78,6 +78,7 @@ workflow REPEAT_LIBRARY_BUILDER {
             BUILD_REPEATMASKER_DB.out.db,        // Which process needs the db's?
             BUILD_TRANSPOSIBLE_DB.out.db)
         if (params.uniprot_is_filtered){
+            // Need to pass the library
             uniprot_db.set { filtered_uniprot_db }
         } else {
             TRANSPOSONPSI(uniprot_db)

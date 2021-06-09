@@ -37,6 +37,6 @@ process BLAST_BLASTN {
         -query $fasta \\
         $options.args \\
         -out ${prefix}.blastn.txt
-    echo \$(blastn -version 2>&1) | sed 's/^.*blastn: //; s/ .*\$//' > ${software}.version.txt
+    blastn -version | sed -e '/^blastn:/!d; s/^.*blastn: //' > ${software}.version.txt
     """
 }
