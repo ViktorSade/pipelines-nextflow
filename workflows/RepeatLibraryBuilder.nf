@@ -7,14 +7,16 @@ nextflow.enable.dsl=2
  * given `params.foo` specify on the run command line `--foo some_value`.
  */
 
-params.genome = ''                                // Genome to build Repeat library from
-params.organism_name = ''                         // Organism scientific name
-params.repeatmasker_library = ''                  // Path to repeat masker lib
-params.repeatpeps_library = ''                    // Path to repeat peps lib
-params.transposon_psi_lib = ''                    // Path to uniprot fasta
-params.build_repeat_masker_lib = false            // True if build blast db on repeat masker lib
-params.build_repeat_peps_lib = false              // True if build blast db on repeat peps lib
-params.build_transposon_psi_lib = false           // True if build blast db on uniprot fasta
+/*
+ Samplesheet column headers
+ - name : The name to use for file naming. Often based on the scientific name.
+ - fasta : The path to the fasta.
+ */
+params.input = ''                                 // Path to Samplesheet
+params.repeatmasker_db = ''                       // Path to Repeat Masker db
+params.transposible_element_db = ''               // Path to Transposible element db
+params.uniprot_db = ''                            // Path to Uniprot fasta
+params.uniprot_is_filtered = true                 // True if the Uniprot Fasta is filtered for transposible elements
 
 log.info """
 NBIS
@@ -32,14 +34,19 @@ NBIS
 
  """
 
-def buildrepeatmaskerdb = params.build_repeat_masker_lib
-def buildrepeatpeptidedb = params.build_repeat_peps_lib
-def buildtransposonpsidb = build_transposon_psi_lib
+include { get_sample_info } from './utilities.nf'
 
 workflow {
 
     main:
-        REPEAT_LIBRARY_BUILDER()
+        Channel.fromPath(params.input)
+            .splitCsv(header:true, sep:',')
+            .map { get_sample_info(it) }
+            .set { input_ch }
+        REPEAT_LIBRARY_BUILDER(input_ch,
+            file(params.repeatmasker_db, checkIfExists:true),
+            file(params.transposible_element_db, checkIfExists:true),
+            file(params.uniprot_db, checkIfExists:true))
 
 }
 
