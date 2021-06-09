@@ -78,12 +78,14 @@ workflow REPEAT_LIBRARY_BUILDER {
             BUILD_REPEATMASKER_DB.out.db,        // Which process needs the db's?
             BUILD_TRANSPOSIBLE_DB.out.db)
         if (params.uniprot_is_filtered){
-            // Need to pass the library
+            // Need to pass the whole library or move uniprot build db
             uniprot_db.set { filtered_uniprot_db }
         } else {
+            // Chunk the fasta
             TRANSPOSONPSI(uniprot_db)
+            // Merge the tophits
             GAAS_FILTERSEQ(uniprot_db,TRANSPOSONPSI.out.tophits)
-            BUILD_UNIPROT_DB(GAAS_FILTERSEQ.out.filtered_sequences)             // uses `storeDir` to determine if build needed
+            BUILD_UNIPROT_DB(GAAS_FILTERSEQ.out.fasta)             // uses `storeDir` to determine if build needed
             BUILD_UNIPROT_DB.out.db.set { filtered_uniprot_db }
         }
         BLAST_BLASTX(REPEATMODELER_REPEATMODELER.out.repeat_sequences,
