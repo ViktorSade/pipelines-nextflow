@@ -93,7 +93,7 @@ workflow REPEAT_LIBRARY_BUILDER {
         // Report?
 
     emit:
-        repeat_library = REPEATMODELER_REPEATMODELER.out.repeat_sequences
+        unfiltered_repeat_library = REPEATMODELER_REPEATMODELER.out.repeat_sequences
         gene_filtered_repeat_library = PROTEXCLUDER.out.repeat_sequences
         filtered_proteins = GAAS_FILTERSEQ.out.filtered_sequences.ifEmpty([])   // Or do you want the next stage?
 

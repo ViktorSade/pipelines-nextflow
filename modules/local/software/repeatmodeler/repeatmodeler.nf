@@ -19,8 +19,9 @@ process REPEATMODELER_REPEATMODELER {
     }
 
     input:
-    tuple val(meta), path(fasta)
-    path  db
+    tuple val(meta), path(database)
+    path repeatmasker_db
+    path transposible_element_db
 
     output:
     tuple val(meta), path "*/consensi.fa.classified"      , emit: repeat_sequences
