@@ -17,6 +17,7 @@ params.repeatmasker_db = ''                       // Path to Repeat Masker db
 params.transposible_element_db = ''               // Path to Transposible element db
 params.uniprot_db = ''                            // Path to Uniprot fasta
 params.uniprot_is_filtered = true                 // True if the Uniprot Fasta is filtered for transposible elements
+params.fasta_chunk_size = 10                      // How many records to store per fasta, when distributing processing
 
 log.info """
 NBIS
@@ -79,21 +80,30 @@ workflow REPEAT_LIBRARY_BUILDER {
             BUILD_TRANSPOSIBLE_DB.out.db)
         if (params.uniprot_is_filtered){
             // Need to pass the whole library or move uniprot build db
-            uniprot_db.set { filtered_uniprot_db }
+            uniprot_db.set { filtered_uniprot }
         } else {
-            // Chunk the fasta
-            TRANSPOSONPSI(uniprot_db)
-            // Merge the tophits
-            GAAS_FILTERSEQ(uniprot_db,TRANSPOSONPSI.out.tophits)
-            BUILD_UNIPROT_DB(GAAS_FILTERSEQ.out.fasta)             // uses `storeDir` to determine if build needed
-            BUILD_UNIPROT_DB.out.db.set { filtered_uniprot_db }
+            TRANSPOSONPSI(uniprot_db.splitFasta( by: params.fasta_chunk_size))
+            GAAS_FILTERSEQ(uniprot_db,TRANSPOSONPSI.out.tophits.collectFile())
+            GAAS_FILTERSEQ.out.fasta.set { filtered_uniprot }
         }
+        BUILD_UNIPROT_DB(filtered_uniprot)       // uses `storeDir` to determine if build needed?
         BLAST_BLASTX(REPEATMODELER_REPEATMODELER.out.repeat_sequences,
-            filtered_uniprot_db)
-        PROTEXCLUDER(REPEATMODELER_REPEATMODELER.out.repeat_sequences,
-            BLAST_BLASTX.out.txt)
+            BUILD_UNIPROT_DB.out.db)
+        PROTEXCLUDER(REPEATMODELER_REPEATMODELER.out.repeat_sequences
+            .join(BLAST_BLASTX.out.txt))
 
         // Report?
+        // grep ">" consensi.fa.classifiednoProtFinal| sed 's/.*#//' | sed 's/ .*//' | sort -k1,1 | uniq -c  | awk 'BEGIN{OFS="\t";print "Repeat","Frequency"}{OFS="\t";print $2,$1}'
+        /*
+        Repeat	Frequency
+        DNA/TcMar-Ant1	1
+        DNA/TcMar-Fot1	3
+        DNA/TcMar-Fot1	2
+        LTR/Gypsy	3
+        LTR/Gypsy	1
+        Unknown	42
+        Unknown	5
+        */
 
     emit:
         unfiltered_repeat_library = REPEATMODELER_REPEATMODELER.out.repeat_sequences
@@ -101,122 +111,6 @@ workflow REPEAT_LIBRARY_BUILDER {
         filtered_proteins = GAAS_FILTERSEQ.out.filtered_sequences.ifEmpty([])   // Or do you want the next stage?
 
 }
-
-/* process BLASTX_MAKEBLASTDB {  // Import as module, call 3x
-
-    input:
-    val type
-    path library
-
-    output:
-    path "$library*", includeInputs: true, emit: blast_db
-
-    script:
-    """
-    makeblastdb -dbtype $type -in $library
-    """
-
-}
-
-process REPEATMODELER_BUILDDB {
-
-    input:
-    path genome
-    val organism_name
-
-    output:
-    path "${organism_name}.*", emit: repeat_modeler_db
-
-    script:
-    """
-    BuildDatabase -name $organism_name -engine ncbi $genome
-    """
-
-}
-
-process REPEATMODELER_REPEATMODELER {
-
-    input:
-    path dbfiles
-
-    output:
-    path "* /consensi.fa.classified", emit: repeat_library
-
-    script:
-    database_name = // generate prefix.
-    """
-    RepeatModeler –database $database_name -engine ncbi –pa ${task.cpus}
-    """
-
-}
-
-process TRANSPOSONPSI {
-
-    input:
-    path fasta  // proteins.fasta
-
-    output:
-    path "${fasta}.all.TPSI.{allHits,topHits}", emit: transposon_hits
-
-    script:
-    """
-    # TODO: check how this is distributed.
-    gaas_transposonPSI2grid.pl -f $fasta -o transposonPSI
-    """
-
-}
-
-process GAAS_FILTERSEQ {
-
-    input:
-    path fasta
-    path tophits
-
-    output:
-    path "proteins.filtered.fa", emit: filtered_fasta
-
-    script:
-    """
-    awk '{if(\$0 ~ /^[^\\/\\/.*]/) print \$5}' $tophits | sort -u > accessions.list
-    gaas_fasta_removeSeqFromIDlist.pl -f $fasta -l accessions.list -o proteins.filtered.fa
-    """
-
-}
-
-process BLAST_BLASTX {
-    //versions ncbi-blast-2.2.28+ and ncbi-blast-2.4.0+
-
-    input:
-    path protein_db //  /projects/references/databases/uniprot/2020-12/transposon/proteins.filtered.fa
-    path fasta // consensi.fa.classified
-
-    output:
-    path "blastx.out", emit: blast_hits
-
-    script:
-    """
-    // makeblastdb –in proteins.filtered.fa –dbtype prot // do BLASTX_MAKEBLASTDB
-    blastx -db $protein_db -query $fasta -num_threads ${task.cpus} -out blastx.out
-    """
-
-}
-
-process PROTEXCLUDER {
-
-    input:
-    path blast_hits
-    path fasta // consensi.fa.classified
-
-    output:
-    path "${fasta}noProtFinal", emit: repeat_library
-
-    script:
-    """
-    ProtExcluder.pl $blast_hits $fasta
-    """
-
-}
- */
 
 workflow.onComplete {
     log.info ( workflow.success ? "\nRepeat Library Builder complete!\n" : "Oops .. something went wrong\n" )
